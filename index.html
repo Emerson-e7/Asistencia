@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231F3864'/><text y='72' x='50' text-anchor='middle' font-size='58'>🕐</text></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Asistencia – PIN</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1F3864">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Asistencia">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F4F0;--surface:#FFFFFF;--surface2:#F0EFE9;--border:#E2E0D8;--border2:#CCCAB8;
+  --text:#1A1916;--text2:#6B6960;--text3:#9E9C93;
+  --green-bg:#E8F5EE;--green:#1A7A48;--green-border:#B6DFC8;
+  --red-bg:#FAECEA;--red:#A8321F;--red-border:#F0C4BB;
+  --blue-bg:#EAF0FA;--blue:#2250A8;--blue-border:#BACBF0;
+  --amber-bg:#FBF3E4;--amber:#8A5A10;--amber-border:#F0D49A;
+  --radius:12px;--radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:10}
+.logo{font-size:15px;font-weight:600;letter-spacing:-0.02em}
+.logo span{color:var(--text3);font-weight:400}
+.header-right{display:flex;align-items:center;gap:8px}
+.clock{font-family:'DM Mono',monospace;font-size:13px;color:var(--text2);background:var(--surface2);padding:5px 12px;border-radius:99px;border:1px solid var(--border)}
+.header-badge{font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;display:none}
+.header-badge.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.header-badge.tarde{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem}
+.tab-btn{padding:12px 18px;font-size:13px;font-weight:500;color:var(--text3);border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;font-family:'DM Sans',sans-serif}
+.tab-btn:hover{color:var(--text2)}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--text)}
+
+main{flex:1;padding:2rem 1.5rem;max-width:520px;margin:0 auto;width:100%}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1rem}
+
+.pin-screen{text-align:center;padding:1.25rem 0 0.75rem}
+.pin-label{font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:14px}
+.pin-dots{display:flex;gap:8px;justify-content:center;margin-bottom:12px}
+.pin-dot-el{width:13px;height:13px;border-radius:50%;border:2px solid var(--border2);background:transparent;transition:all 0.12s}
+.pin-dot-el.filled{background:var(--text);border-color:var(--text);transform:scale(1.1)}
+.pin-dot-el.error{background:var(--red);border-color:var(--red)}
+.pin-name{font-size:14px;font-weight:500;color:var(--text2);min-height:22px}
+
+.tardanza-aviso{display:none;margin-bottom:10px;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;text-align:center}
+.tardanza-aviso.tarde{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:1.25rem 0}
+.key{height:60px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--text);cursor:pointer;transition:all 0.1s;display:flex;align-items:center;justify-content:center;user-select:none}
+.key:hover{background:var(--border);border-color:var(--border2)}
+.key:active,.key.pressed{transform:scale(0.93);background:var(--border2)}
+.key.del{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--text3)}
+.key.zero{grid-column:2}
+
+.kbd-hint{text-align:center;font-size:11px;color:var(--text3);margin:-6px 0 6px;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;line-height:1.8}
+.kbd-hint kbd{font-family:'DM Mono',monospace;background:var(--surface2);border:1px solid var(--border2);border-bottom:2px solid var(--border2);border-radius:4px;padding:1px 5px;font-size:10px;color:var(--text2)}
+
+.obs-wrap{margin-top:10px}
+.obs-toggle{width:100%;padding:9px;font-size:13px;color:var(--text3);background:transparent;border:1px dashed var(--border2);border-radius:var(--radius-sm);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s}
+.obs-toggle:hover{color:var(--text2);border-color:var(--text3)}
+.obs-area{margin-top:8px;display:none}
+.obs-area textarea{width:100%;height:68px;padding:10px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);resize:none;font-family:'DM Sans',sans-serif;outline:none}
+.obs-area textarea:focus{border-color:var(--text2)}
+
+.action-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.btn-entrada,.btn-salida{height:50px;border-radius:var(--radius-sm);font-size:15px;font-weight:500;cursor:pointer;transition:all 0.15s;font-family:'DM Sans',sans-serif}
+.btn-entrada{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.btn-entrada:hover{background:var(--green-border)}
+.btn-salida{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.btn-salida:hover{background:var(--red-border)}
+
+.msg{padding:11px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;text-align:center;margin-top:10px}
+.msg.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.msg.err{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.msg.info{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.msg.warn{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.msg.hidden{display:none}
+
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3)}
+.btn-small{padding:6px 14px;font-size:12px;font-weight:500;border:1px solid var(--border2);border-radius:99px;background:var(--surface);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s}
+.btn-small:hover{background:var(--surface2);color:var(--text)}
+
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.filter-bar input,.filter-bar select{height:34px;padding:0 10px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;outline:none}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--text2)}
+
+.stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center}
+.stat-num{font-size:22px;font-weight:600;font-family:'DM Mono',monospace}
+.stat-lbl{font-size:11px;color:var(--text3);margin-top:2px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em}
+
+.reg-item{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.reg-item:last-child{border-bottom:none}
+.badge{font-size:10px;font-weight:600;letter-spacing:0.05em;padding:3px 9px;border-radius:99px;white-space:nowrap;margin-top:2px}
+.badge.e{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.badge.s{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.badge.t{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.reg-body{flex:1;min-width:0}
+.reg-name{font-size:13px;font-weight:500}
+.reg-time{font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:1px}
+.reg-obs{font-size:12px;color:var(--text2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty{text-align:center;padding:2.5rem 0;color:var(--text3);font-size:13px}
+
+.user-item{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.user-item:last-child{border-bottom:none}
+.user-name{font-weight:500}
+.user-pin{font-family:'DM Mono',monospace;font-size:12px;color:var(--text3)}
+.user-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px;padding:0 4px;line-height:1;transition:color 0.15s}
+.user-del:hover{color:var(--red)}
+.add-form{background:var(--surface2);border-radius:var(--radius-sm);padding:14px;margin-top:10px;display:none;border:1px solid var(--border)}
+.add-form input{width:100%;height:38px;padding:0 12px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);margin-bottom:8px;font-family:'DM Sans',sans-serif;outline:none}
+.add-form input:last-of-type{margin-bottom:0}
+.add-form input:focus{border-color:var(--text2)}
+.form-btns{display:flex;gap:8px;margin-top:10px}
+.btn-save{flex:1;height:38px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);font-family:'DM Sans',sans-serif}
+.btn-cancel{flex:1;height:38px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;background:var(--surface);color:var(--text2);border:1px solid var(--border2);font-family:'DM Sans',sans-serif}
+
+.config-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border)}
+.config-row:last-child{border-bottom:none}
+.config-lbl{font-size:13px;font-weight:500}
+.config-desc{font-size:12px;color:var(--text3);margin-top:2px}
+.config-row input[type=time]{height:36px;padding:0 10px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);outline:none;cursor:pointer}
+.config-row input[type=time]:focus{border-color:var(--text2)}
+.config-row input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--text)}
+.config-save{width:100%;height:42px;margin-top:14px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;background:var(--text);color:#fff;border:none;font-family:'DM Sans',sans-serif;transition:opacity 0.15s}
+.config-save:hover{opacity:0.85}
+
+footer{text-align:center;padding:1.25rem;font-size:11px;color:var(--text3);border-top:1px solid var(--border);background:var(--surface)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Asistencia <span>/ PIN</span></div>
+  <div class="header-right">
+    <div class="header-badge" id="header-badge"></div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('marcar')">Marcar</button>
+  <button class="tab-btn" onclick="showTab('registros')">Registros</button>
+  <button class="tab-btn" onclick="showTab('personal')">Personal</button>
+  <button class="tab-btn" onclick="showTab('config')">Configuración</button>
+</div>
+
+<main>
+
+  <!-- MARCAR -->
+  <div id="tab-marcar">
+    <div class="tardanza-aviso" id="tardanza-aviso"></div>
+    <div class="card">
+      <div class="pin-screen">
+        <div class="pin-label">Ingresa tu DNI o PIN</div>
+        <div class="pin-dots">
+          <div class="pin-dot-el" id="d0"></div>
+          <div class="pin-dot-el" id="d1"></div>
+          <div class="pin-dot-el" id="d2"></div>
+          <div class="pin-dot-el" id="d3"></div>
+          <div class="pin-dot-el" id="d4"></div>
+          <div class="pin-dot-el" id="d5"></div>
+          <div class="pin-dot-el" id="d6"></div>
+          <div class="pin-dot-el" id="d7"></div>
+        </div>
+        <div class="pin-name" id="pin-name">&nbsp;</div>
+      </div>
+
+      <div class="keypad">
+        <button class="key" id="k1" onclick="presKey('1')">1</button>
+        <button class="key" id="k2" onclick="presKey('2')">2</button>
+        <button class="key" id="k3" onclick="presKey('3')">3</button>
+        <button class="key" id="k4" onclick="presKey('4')">4</button>
+        <button class="key" id="k5" onclick="presKey('5')">5</button>
+        <button class="key" id="k6" onclick="presKey('6')">6</button>
+        <button class="key" id="k7" onclick="presKey('7')">7</button>
+        <button class="key" id="k8" onclick="presKey('8')">8</button>
+        <button class="key" id="k9" onclick="presKey('9')">9</button>
+        <button class="key zero" id="k0" onclick="presKey('0')">0</button>
+        <button class="key del" id="kdel" onclick="borrar()">&#8592; borrar</button>
+      </div>
+
+      <div class="kbd-hint">
+        Teclado: <kbd>0–9</kbd> digitar &nbsp; <kbd>&#9003;</kbd> borrar &nbsp; <kbd>E</kbd> entrada &nbsp; <kbd>S</kbd> salida
+      </div>
+
+      <div id="obs-wrap" style="display:none" class="obs-wrap">
+        <button class="obs-toggle" onclick="toggleObs()" id="obs-btn">+ Agregar observación (opcional)</button>
+        <div class="obs-area" id="obs-area">
+          <textarea id="obs-text" placeholder="Ej: Cita médica, tráfico, trámite..."></textarea>
+        </div>
+      </div>
+
+      <div class="action-btns" id="action-btns" style="display:none">
+        <button class="btn-entrada" onclick="registrar('ENTRADA')">↗ Entrada &nbsp;<small style="font-size:10px;opacity:0.7">[E]</small></button>
+        <button class="btn-salida"  onclick="registrar('SALIDA')">↘ Salida &nbsp;<small style="font-size:10px;opacity:0.7">[S]</small></button>
+      </div>
+
+      <div class="msg hidden" id="msg-box"></div>
+    </div>
+  </div>
+
+  <!-- REGISTROS -->
+  <div id="tab-registros" style="display:none">
+    <div class="stats-bar">
+      <div class="stat-card"><div class="stat-num" id="st-total">0</div><div class="stat-lbl">Total hoy</div></div>
+      <div class="stat-card"><div class="stat-num" id="st-e" style="color:var(--green)">0</div><div class="stat-lbl">Entradas</div></div>
+      <div class="stat-card"><div class="stat-num" id="st-t" style="color:var(--amber)">0</div><div class="stat-lbl">Tardanzas</div></div>
+    </div>
+    <div class="filter-bar">
+      <input type="date" id="filtro-fecha" onchange="renderRegistros()">
+      <select id="filtro-tipo" onchange="renderRegistros()">
+        <option value="">Todos</option>
+        <option value="ENTRADA">Entrada</option>
+        <option value="TARDANZA">Tardanza</option>
+        <option value="SALIDA">Salida</option>
+      </select>
+      <button class="btn-small" onclick="exportarExcel()" style="background:var(--green-bg);color:var(--green);border-color:var(--green-border)">⬇ Exportar Excel</button>
+    </div>
+    <div class="card" id="lista-registros" style="padding:0 1.25rem"></div>
+  </div>
+
+  <!-- PERSONAL -->
+  <div id="tab-personal" style="display:none">
+    <div class="toolbar">
+      <div class="section-label">Usuarios (<span id="count-usuarios">0</span>)</div>
+      <button class="btn-small" onclick="toggleAddForm()">+ Agregar</button>
+    </div>
+    <div class="card" style="padding:0 1.25rem">
+      <div id="lista-usuarios"></div>
+    </div>
+    <div class="add-form" id="add-form">
+      <input id="new-nombre" placeholder="Apellidos y nombres" autocomplete="off"/>
+      <input id="new-pin" placeholder="DNI o PIN de 8 dígitos" maxlength="8" type="password" autocomplete="new-password"/>
+      <div class="form-btns">
+        <button class="btn-save" onclick="agregarUsuario()">Guardar</button>
+        <button class="btn-cancel" onclick="toggleAddForm()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <div id="tab-config" style="display:none">
+    <div class="card">
+      <div class="config-row">
+        <div>
+          <div class="config-lbl">Hora límite de entrada</div>
+          <div class="config-desc">Entradas después de esta hora se marcan como tardanza</div>
+        </div>
+        <input type="time" id="cfg-hora" value="08:00">
+      </div>
+      <div class="config-row">
+        <div>
+          <div class="config-lbl">Activar alertas de tardanza</div>
+          <div class="config-desc">Muestra aviso al registrar entrada tarde</div>
+        </div>
+        <input type="checkbox" id="cfg-alertas" checked>
+      </div>
+      <div class="config-row">
+        <div>
+          <div class="config-lbl">Indicador de estado en encabezado</div>
+          <div class="config-desc">Verde = a tiempo, ámbar = tarde</div>
+        </div>
+        <input type="checkbox" id="cfg-header" checked>
+      </div>
+      <button class="config-save" onclick="guardarConfig()">Guardar configuración</button>
+      <div class="msg hidden" id="msg-config" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <div class="section-label" style="margin-bottom:12px">Zona de peligro</div>
+      <button class="btn-small" style="color:var(--red);border-color:var(--red-border);width:100%;padding:10px;border-radius:var(--radius-sm)" onclick="limpiarRegistros()">
+        Eliminar todos los registros
+      </button>
+    </div>
+  </div>
+
+</main>
+<footer>Control de Asistencia &mdash; datos guardados localmente en este navegador</footer>
+
+<script>
+const SK_U='asist_v2_u', SK_R='asist_v2_r', SK_C='asist_v2_c';
+const DEF_U=[
+  {id:1,nombre:"García López, Ana María",    pin:"12345678"},
+  {id:2,nombre:"Quispe Torres, Juan Carlos", pin:"23456789"},
+  {id:3,nombre:"Flores Mendoza, Rosa Elena", pin:"34567890"},
+  {id:4,nombre:"Mamani Ccoa, Pedro Luis",    pin:"45678901"},
+  {id:5,nombre:"Silva Huanca, Carmen Rosa",  pin:"56789012"},
+  {id:6,nombre:"Vargas Díaz, Luis Alberto",  pin:"67890123"},
+  {id:7,nombre:"Cárdenas Puma, Martha E.",   pin:"78901234"},
+  {id:8,nombre:"Condori Asto, Renzo Paul",   pin:"89012345"},
+];
+const DEF_C={horaLimite:"08:00",alertas:true,headerBadge:true};
+
+function ld(k,d){try{return JSON.parse(localStorage.getItem(k))||d;}catch(e){return d;}}
+function sv(k,v){localStorage.setItem(k,JSON.stringify(v));}
+
+let usuarios=ld(SK_U,DEF_U), registros=ld(SK_R,[]), config=ld(SK_C,DEF_C);
+let pin="", pinOk=false, obsVisible=false;
+
+// RELOJ
+function tick(){
+  const n=new Date();
+  document.getElementById('clock').textContent=n.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const b=document.getElementById('header-badge');
+  if(!config.headerBadge){b.style.display='none';return;}
+  b.style.display='block';
+  if(!esTarde(n)){b.className='header-badge ok';b.textContent='A tiempo';}
+  else{
+    const d=Math.floor((n-limiteDate(n))/60000);
+    b.className='header-badge tarde';
+    b.textContent=d<60?`+${d} min tarde`:`+${Math.floor(d/60)}h tarde`;
+  }
+}
+setInterval(tick,1000); tick();
+
+function limiteDate(ref){
+  const [hh,mm]=config.horaLimite.split(':').map(Number);
+  const d=new Date(ref); d.setHours(hh,mm,0,0); return d;
+}
+function esTarde(ref){return (ref||new Date())>limiteDate(ref||new Date());}
+
+// TABS
+function showTab(t){
+  ['marcar','registros','personal','config'].forEach(id=>{
+    document.getElementById('tab-'+id).style.display=id===t?'block':'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach((el,i)=>{
+    el.classList.toggle('active',['marcar','registros','personal','config'][i]===t);
+  });
+  if(t==='registros'){setFiltroHoy();renderRegistros();}
+  if(t==='personal') renderUsuarios();
+  if(t==='config')   cargarConfig();
+}
+function setFiltroHoy(){
+  const el=document.getElementById('filtro-fecha');
+  if(!el.value) el.value=new Date().toISOString().split('T')[0];
+}
+
+// TECLADO FÍSICO
+document.addEventListener('keydown',e=>{
+  const tag=document.activeElement.tagName;
+  if(['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
+  if(/^[0-9]$/.test(e.key)){flash('k'+e.key);presKey(e.key);}
+  else if(e.key==='Backspace'||e.key==='Delete'){flash('kdel');borrar();}
+  else if((e.key==='e'||e.key==='E')&&pinOk) registrar('ENTRADA');
+  else if((e.key==='s'||e.key==='S')&&pinOk) registrar('SALIDA');
+});
+function flash(id){
+  const el=document.getElementById(id); if(!el)return;
+  el.classList.add('pressed'); setTimeout(()=>el.classList.remove('pressed'),150);
+}
+
+// PIN
+function presKey(d){
+  if(pin.length>=8) return;
+  pin+=d; actualizarDots();
+  if(pin.length===8) validar();
+}
+function borrar(){
+  if(!pin.length) return;
+  pin=pin.slice(0,-1); pinOk=false; actualizarDots();
+  if(pin.length<4){
+    document.getElementById('action-btns').style.display='none';
+    document.getElementById('obs-wrap').style.display='none';
+    hideObs();
+    document.getElementById('pin-name').innerHTML='&nbsp;';
+    document.getElementById('msg-box').className='msg hidden';
+    document.getElementById('tardanza-aviso').style.display='none';
+    resetDotColors();
+  }
+}
+function actualizarDots(){
+  for(let i=0;i<8;i++) document.getElementById('d'+i).classList.toggle('filled',i<pin.length);
+}
+function resetDotColors(){
+  document.querySelectorAll('.pin-dot-el').forEach(el=>{el.classList.remove('error');});
+}
+// Último registro de ENTRADA del usuario (hoy)
+function ultimaEntrada(uid){
+  const hoy=new Date().toISOString().split('T')[0];
+  return registros.find(r=>r.uid===uid && (r.tipo==='ENTRADA'||r.tipo==='TARDANZA') && r.isoDate===hoy);
+}
+// Cuándo puede volver a marcar ENTRADA
+function bloqueadoHasta(uid){
+  const e=ultimaEntrada(uid); if(!e) return null;
+  const t=new Date(e.ts); t.setHours(t.getHours()+4); return t;
+}
+function tiempoRestante(hasta){
+  const diff=Math.max(0,hasta-new Date());
+  const h=Math.floor(diff/3600000);
+  const m=Math.floor((diff%3600000)/60000);
+  const s=Math.floor((diff%60000)/1000);
+  return h>0?`${h}h ${String(m).padStart(2,'0')}m`:m>0?`${m}m ${String(s).padStart(2,'0')}s`:`${s}s`;
+}
+
+function validar(){
+  const u=usuarios.find(x=>x.pin===pin);
+  if(u){
+    pinOk=true;
+    document.getElementById('pin-name').textContent=u.nombre.split(',')[0].trim();
+
+    const hasta=bloqueadoHasta(u.id);
+    const bloqueado=hasta && new Date()<hasta;
+
+    // Mostrar botones siempre, pero deshabilitar ENTRADA si está bloqueado
+    document.getElementById('obs-wrap').style.display='block';
+    document.getElementById('action-btns').style.display='grid';
+    const btnE=document.querySelector('.btn-entrada');
+    const btnS=document.querySelector('.btn-salida');
+
+    if(bloqueado){
+      // Bloquear solo el botón de ENTRADA
+      btnE.disabled=true;
+      btnE.style.opacity='0.4';
+      btnE.style.cursor='not-allowed';
+      btnS.disabled=false;
+      btnS.style.opacity='1';
+      btnS.style.cursor='pointer';
+
+      const entrada=ultimaEntrada(u.id);
+      // Mensaje con countdown en vivo
+      clearInterval(window._cdInterval);
+      const actualizarMsg=()=>{
+        if(new Date()>=hasta){
+          clearInterval(window._cdInterval);
+          btnE.disabled=false; btnE.style.opacity='1'; btnE.style.cursor='pointer';
+          showMsg('PIN correcto — ahora puedes marcar de nuevo.','info');
+          return;
+        }
+        showMsg(`Entrada ya registrada a las ${entrada.hora}. Entrada disponible en: ${tiempoRestante(hasta)}`,'warn');
+      };
+      actualizarMsg();
+      window._cdInterval=setInterval(actualizarMsg,1000);
+
+      if(config.alertas&&esTarde()){
+        document.getElementById('tardanza-aviso').textContent=`Llegada tardía — horario límite: ${config.horaLimite}`;
+        document.getElementById('tardanza-aviso').style.display='block';
+      }
+    } else {
+      // Sin bloqueo, habilitar todo
+      btnE.disabled=false; btnE.style.opacity='1'; btnE.style.cursor='pointer';
+      btnS.disabled=false; btnS.style.opacity='1'; btnS.style.cursor='pointer';
+      clearInterval(window._cdInterval);
+
+      if(config.alertas&&esTarde()){
+        document.getElementById('tardanza-aviso').textContent=`Llegada tardía — horario límite: ${config.horaLimite}`;
+        document.getElementById('tardanza-aviso').style.display='block';
+        showMsg('Tardanza detectada. Puedes agregar una observación antes de confirmar.','warn');
+      } else {
+        showMsg('PIN correcto — presiona Entrada / Salida  (o teclas E / S)','info');
+      }
+    }
+  } else {
+    pinOk=false;
+    document.querySelectorAll('.pin-dot-el').forEach(el=>el.classList.add('error'));
+    showMsg('PIN incorrecto. Inténtalo de nuevo.','err');
+    setTimeout(limpiar,1300);
+  }
+}
+
+// OBS
+function toggleObs(){
+  obsVisible=!obsVisible;
+  document.getElementById('obs-area').style.display=obsVisible?'block':'none';
+  document.getElementById('obs-btn').textContent=obsVisible?'– Quitar observación':'+ Agregar observación (opcional)';
+  if(obsVisible) document.getElementById('obs-text').focus();
+}
+function hideObs(){
+  obsVisible=false;
+  const a=document.getElementById('obs-area'); if(a) a.style.display='none';
+  const b=document.getElementById('obs-btn');  if(b) b.textContent='+ Agregar observación (opcional)';
+  const t=document.getElementById('obs-text'); if(t) t.value='';
+}
+
+// REGISTRAR
+function registrar(tipo){
+  const u=usuarios.find(x=>x.pin===pin); if(!u) return;
+  const obs=document.getElementById('obs-text').value.trim();
+  const ahora=new Date();
+  const tarde=tipo==='ENTRADA'&&config.alertas&&esTarde(ahora);
+  registros.unshift({
+    id:Date.now(), uid:u.id, nombre:u.nombre, 
+    tipo: tarde?'TARDANZA':tipo,
+    fecha:ahora.toLocaleDateString('es-PE'),
+    hora:ahora.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),
+    isoDate:ahora.toISOString().split('T')[0],
+    ts:ahora.toISOString(), obs
+  });
+  sv(SK_R,registros);
+  const h=ahora.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
+  showMsg(tarde?`Tardanza registrada a las ${h}`:`${tipo==='ENTRADA'?'Entrada':'Salida'} registrada a las ${h}`, tarde?'warn':'ok');
+  setTimeout(limpiar,2000);
+}
+function limpiar(){
+  clearInterval(window._cdInterval);
+  pin=''; pinOk=false; actualizarDots(); resetDotColors();
+  document.getElementById('pin-name').innerHTML='&nbsp;';
+  document.getElementById('action-btns').style.display='none';
+  document.getElementById('obs-wrap').style.display='none';
+  hideObs();
+  document.getElementById('msg-box').className='msg hidden';
+  document.getElementById('tardanza-aviso').style.display='none';
+  // Resetear botones
+  const btnE=document.querySelector('.btn-entrada');
+  const btnS=document.querySelector('.btn-salida');
+  if(btnE){btnE.disabled=false;btnE.style.opacity='1';btnE.style.cursor='pointer';}
+  if(btnS){btnS.disabled=false;btnS.style.opacity='1';btnS.style.cursor='pointer';}
+}
+function showMsg(txt,tipo){
+  const el=document.getElementById('msg-box'); el.textContent=txt; el.className='msg '+tipo;
+}
+
+// REGISTROS
+function renderRegistros(){
+  const fF=document.getElementById('filtro-fecha').value;
+  const tF=document.getElementById('filtro-tipo').value;
+  let f=registros;
+  if(fF) f=f.filter(r=>r.isoDate===fF);
+  if(tF) f=f.filter(r=>r.tipo===tF);
+  const dia=fF?registros.filter(r=>r.isoDate===fF):registros;
+  document.getElementById('st-total').textContent=dia.length;
+  document.getElementById('st-e').textContent=dia.filter(r=>r.tipo==='ENTRADA').length;
+  document.getElementById('st-t').textContent=dia.filter(r=>r.tipo==='TARDANZA').length;
+  const el=document.getElementById('lista-registros');
+  if(!f.length){el.innerHTML='<div class="empty">Sin registros para este filtro</div>';return;}
+  el.innerHTML=f.map(r=>{
+    const bc=r.tipo==='SALIDA'?'s':r.tipo==='TARDANZA'?'t':'e';
+    return `<div class="reg-item">
+      <span class="badge ${bc}">${r.tipo}</span>
+      <div class="reg-body">
+        <div class="reg-name">${r.nombre}</div>
+        <div class="reg-time">${r.fecha} &nbsp;|&nbsp; ${r.hora}</div>
+        ${r.obs?`<div class="reg-obs">${r.obs}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function exportarExcel(){
+  if(!registros.length){alert('No hay registros para exportar.');return;}
+  if(typeof XLSX==='undefined'){alert('La librería Excel aún no cargó. Espera un momento.');return;}
+  const fF=document.getElementById('filtro-fecha').value;
+  const tF=document.getElementById('filtro-tipo').value;
+  let datos=registros;
+  if(fF) datos=datos.filter(r=>r.isoDate===fF);
+  if(tF) datos=datos.filter(r=>r.tipo===tF);
+  const wsData=[['N°','APELLIDOS Y NOMBRES','TIPO','FECHA','HORA','OBSERVACIÓN']];
+  datos.forEach((r,i)=>wsData.push([i+1,r.nombre,r.tipo,r.fecha,r.hora,r.obs||'']));
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols']=[{wch:5},{wch:32},{wch:14},{wch:13},{wch:10},{wch:36}];
+  // Estilo encabezado
+  const range=XLSX.utils.decode_range(ws['!ref']);
+  for(let C=range.s.c;C<=range.e.c;C++){
+    const addr=XLSX.utils.encode_cell({r:0,c:C});
+    if(!ws[addr])continue;
+    ws[addr].s={font:{bold:true,color:{rgb:'FFFFFF'},name:'Arial',sz:11},fill:{patternType:'solid',fgColor:{rgb:'1F3864'}},alignment:{horizontal:'center',vertical:'center'}};
+  }
+  // Estilo filas
+  for(let R=1;R<=datos.length;R++){
+    const tipo=datos[R-1].tipo;
+    for(let C=0;C<=5;C++){
+      const addr=XLSX.utils.encode_cell({r:R,c:C});
+      if(!ws[addr])ws[addr]={t:'s',v:''};
+      let fg=R%2===0?'DEEAF1':'FFFFFF';
+      if(tipo==='TARDANZA')fg='FFF2CC';
+      else if(tipo==='SALIDA')fg=R%2===0?'FFE0E0':'FFF5F5';
+      ws[addr].s={font:{name:'Arial',sz:10},fill:{patternType:'solid',fgColor:{rgb:fg}},alignment:{horizontal:C<=1||C===5?'left':'center',vertical:'center'},border:{top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}}};
+    }
+  }
+  ws['!rows']=[{hpt:24}];
+  // Hoja resumen
+  const hoy=fF||new Date().toISOString().split('T')[0];
+  const delDia=registros.filter(r=>r.isoDate===hoy);
+  const resData=[
+    ['RESUMEN DE ASISTENCIA',''],
+    ['Fecha exportada',new Date().toLocaleDateString('es-PE')],
+    ['Período filtrado',fF||'Todos los registros'],
+    ['',''],
+    ['INDICADOR','CANTIDAD'],
+    ['Total registros',datos.length],
+    ['Entradas a tiempo',datos.filter(r=>r.tipo==='ENTRADA').length],
+    ['Tardanzas',datos.filter(r=>r.tipo==='TARDANZA').length],
+    ['Salidas',datos.filter(r=>r.tipo==='SALIDA').length],
+  ];
+  const wsRes=XLSX.utils.aoa_to_sheet(resData);
+  wsRes['!cols']=[{wch:24},{wch:20}];
+  ['A1','A5','B5'].forEach(a=>{if(wsRes[a])wsRes[a].s={font:{bold:true,sz:12,color:{rgb:'1F3864'}}};});
+  XLSX.utils.book_append_sheet(wb,wsRes,'Resumen');
+  XLSX.utils.book_append_sheet(wb,ws,'Registros');
+  const fecha=new Date().toLocaleDateString('es-PE').replace(/\//g,'-');
+  XLSX.writeFile(wb,'asistencia_'+fecha+'.xlsx',{bookType:'xlsx',type:'binary',cellStyles:true});
+}
+
+// PERSONAL
+function renderUsuarios(){
+  document.getElementById('count-usuarios').textContent=usuarios.length;
+  const el=document.getElementById('lista-usuarios');
+  if(!usuarios.length){el.innerHTML='<div class="empty">Sin usuarios</div>';return;}
+  el.innerHTML=usuarios.map(u=>`
+    <div class="user-item">
+      <div class="user-name">${u.nombre}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="user-pin">PIN: ${'●'.repeat(u.pin.length)}</span>
+        <button class="user-del" onclick="eliminarUsuario(${u.id})">&#215;</button>
+      </div>
+    </div>`).join('');
+}
+function toggleAddForm(){
+  const f=document.getElementById('add-form');
+  f.style.display=f.style.display==='block'?'none':'block';
+  if(f.style.display==='block') document.getElementById('new-nombre').focus();
+}
+function agregarUsuario(){
+  const n=document.getElementById('new-nombre').value.trim();
+  const p=document.getElementById('new-pin').value.trim();
+  if(!n){alert('Ingresa el nombre.');return;}
+  if(!/^\d{8}$/.test(p)){alert('El PIN debe ser de exactamente 8 dígitos.');return;}
+  if(usuarios.find(u=>u.pin===p)){alert('Ese PIN ya está en uso.');return;}
+  usuarios.push({id:Date.now(),nombre:n,pin:p});
+  sv(SK_U,usuarios);
+  document.getElementById('new-nombre').value='';
+  document.getElementById('new-pin').value='';
+  toggleAddForm(); renderUsuarios();
+}
+function eliminarUsuario(id){
+  if(!confirm('¿Eliminar este usuario? Sus registros se conservarán.')) return;
+  usuarios=usuarios.filter(u=>u.id!==id); sv(SK_U,usuarios); renderUsuarios();
+}
+
+// CONFIG
+function cargarConfig(){
+  document.getElementById('cfg-hora').value=config.horaLimite;
+  document.getElementById('cfg-alertas').checked=config.alertas;
+  document.getElementById('cfg-header').checked=config.headerBadge;
+}
+function guardarConfig(){
+  config.horaLimite=document.getElementById('cfg-hora').value||'08:00';
+  config.alertas=document.getElementById('cfg-alertas').checked;
+  config.headerBadge=document.getElementById('cfg-header').checked;
+  sv(SK_C,config);
+  const el=document.getElementById('msg-config');
+  el.textContent='Configuración guardada.'; el.className='msg ok';
+  setTimeout(()=>el.className='msg hidden',2500);
+  tick();
+}
+function limpiarRegistros(){
+  if(!confirm('¿Eliminar TODOS los registros? No se puede deshacer.')) return;
+  registros=[]; sv(SK_R,[]); alert('Registros eliminados.');
+}
+
+setFiltroHoy();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</body>
+</html>
